@@ -1,4 +1,7 @@
 import './App.css'
+import {useEffect, useRef, useState} from "react";
+import { EventSourcePolyfill, NativeEventSource } from "event-source-polyfill";
+import axios from "axios";
 
 // velog 에서 사용하는 방식을 모방했슴다
 function App() {
@@ -19,10 +22,74 @@ function App() {
   // 따라서, axios 인스턴스를 통해서 특정 api 요청시 401 요류가 뜬다면 `reissue` 엔드포인트로 요청을 보내서
   // access token 을 재발급 받는 로직을 사용할 수 있슴다.
 
+  const accessToken = 'eyJhbGciOiJIUzI1NiJ9.eyJtZW1iZXJfaWQiOjEsInN1YiI6ImFjY2Vzc190b2tlbiIsImlhdCI6MTcyNDMxMjgxNSwiZXhwIjoxNzI1MzAwNDY5fQ.0k2pk_QkfAk0BgbQPKw2nr5VBKr4qqEbREz8hcUbbUg';
+
+  useEffect(() => {
+    const connect = () => {
+      const eventSource = new EventSourcePolyfill(
+              `http://localhost:8080/api/v1/notification/subscribe`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        },
+      );
+
+      // eventSource.onopen = (e) => {
+      //   const data = e.data;
+      //   if (data !== undefined && data != null) {
+      //     const parse = JSON.parse(data);
+      //     console.log(parse);
+      //   }
+      // }
+
+      eventSource.addEventListener('NOTIFICATION_EVENT', (e) => {
+        console.log('event notification', e);
+        const data = e.data;
+        if (data !== undefined && data != null) {
+          console.log(JSON.parse(data));
+        }
+      });
+
+      return () => {
+        eventSource.close();
+      };
+    };
+
+    return connect();
+  }, []);
+
+
+  // 프로필 이미지 업로드
+
+  const thumbnailInput = useRef();
+
+  const saveFileImage = async e => {
+    try {
+      const formData = new FormData();
+      formData.append('profile_image', e.target.files[0]);
+      formData.append('nickname', '아임소해피');
+
+      const config = {
+        headers: {
+          Authorization: `Bearer ${access_token}`,
+          'Content-Type': 'multipart/form-data',
+        },
+      };
+      await axios.patch(`https://api.joytas.kro.kr/api/v1/users/profile`, formData, config);
+    } catch (error) {
+    }
+  };
+
+
   return (
     <>
       <h1>실험용</h1>
       <a href={OAUTH_URL}>까까오 로그인</a>
+
+      <input type='file' accept='image/jpg, image/jpeg, image/png' multiple ref={thumbnailInput}
+             onChange={saveFileImage}/>
+
     </>
   )
 }
